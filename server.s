@@ -36,6 +36,14 @@ mov rdi, r8
 mov rsi, 0
 mov rax, 50
 syscall
+jmp accept
+
+accept:
+mov rdi, r8
+mov rsi, 0
+mov rdx, 0
+mov rax, 43
+syscall
 jmp exit
 
 exit:
