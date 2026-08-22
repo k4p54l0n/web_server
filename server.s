@@ -2,7 +2,7 @@
 .global _start
 _start:
 
-sub rsp, 4096
+sub rsp, 8192
 xor r10, r10 # r10 to null-terminate the request
 jmp create_socket
 
@@ -46,6 +46,8 @@ mov rsi, 0
 mov rdx, 0
 mov rax, 43
 syscall
+cmp rax, 0
+js exit
 mov r9, rax
 jmp read_request
 
@@ -84,7 +86,7 @@ mov rax, 0 # read syscall
 lea rsi, [rsp+300]
 mov rdx, 1024
 syscall
-mov r8, rax  #bytes read
+mov r12, rax  #bytes read
 mov rax, 3
 syscall
 jmp static_response
@@ -92,7 +94,7 @@ jmp static_response
 write_file:
 lea rsi, [rsp+300]
 mov rdi, r9
-mov rdx, r8
+mov rdx, r12
 mov rax, 1
 syscall
 jmp close_file
@@ -101,7 +103,7 @@ close_file:
 mov rdi, r9
 mov rax, 3
 syscall
-jmp exit
+jmp accept # look for next connection
 
 static_response:
 mov rdi, r9 #fd returned by accept
@@ -112,7 +114,7 @@ syscall
 jmp write_file
 
 exit:
-add rsp, 4096
+add rsp, 8192
 mov rdi, 0
 mov rax, 60
 syscall
