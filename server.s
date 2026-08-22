@@ -115,7 +115,7 @@ close_file:
 mov rdi, r9
 mov rax, 3
 syscall
-jmp exit # look for next connection
+jmp exit
 
 static_response:
 mov rdi, r9 #fd returned by accept
