@@ -3,6 +3,7 @@
 _start:
 
 sub rsp, 4096
+xor r10, r10 # r10 to null-terminate the request
 jmp create_socket
 
 create_socket:
@@ -56,8 +57,51 @@ mov rdi, r9
 lea rsi, [rsp+24]
 mov rdx, 1024
 syscall
+jmp parse_get 
+
+parse_get:
+add rsi, 4
+jmp parse_request
+
+parse_request:
+cmp byte ptr [rsi+r10], 0x20
+je open_file
+inc r10
+jmp parse_request
+
+open_file:
+mov byte ptr[rsi+r10], 0
+mov rdi, rsi
+mov rax, 2
+mov rsi, 0
+mov rdx, 0
+syscall
+jmp read_file
+
+read_file:
+mov rdi, rax # rax contains the fd of the requested file
+mov rax, 0 # read syscall
+lea rsi, [rsp+300]
+mov rdx, 1024
+syscall
+mov r8, rax  #bytes read
+mov rax, 3
+syscall
 jmp static_response
 
+write_file:
+lea rsi, [rsp+300]
+mov rdi, r9
+mov rdx, r8
+mov rax, 1
+syscall
+jmp close_file
+
+close_file:
+mov rdi, r9
+mov rax, 3
+syscall
+jmp exit
 
 static_response:
 mov rdi, r9 #fd returned by accept
@@ -65,10 +109,7 @@ lea rsi, [rip+path]
 mov rdx, 19
 mov rax, 1
 syscall
-mov rdi, r9
-mov rax, 3
-syscall
-jmp exit
+jmp write_file
 
 exit:
 add rsp, 4096
