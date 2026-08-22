@@ -3,7 +3,6 @@
 _start:
 
 sub rsp, 8192
-xor r10, r10 # r10 to null-terminate the request
 jmp create_socket
 
 create_socket:
@@ -41,6 +40,7 @@ syscall
 jmp accept
 
 accept:
+xor r10, r10 # r10 to null-terminate the request
 mov rdi, r8
 mov rsi, 0
 mov rdx, 0
@@ -49,11 +49,21 @@ syscall
 cmp rax, 0
 js exit
 mov r9, rax
-jmp read_request
+mov rax, 57
+syscall
+cmp rax, 0
+je read_request
+mov rdi, r9
+mov rax, 3 # close the previous connection (r9)
+syscall
+jmp accept 
 
 #r9 is client fd
 
 read_request:
+mov rax, 3
+mov rdi, r8
+syscall # close socket fd (child r8 copy)
 mov rax, 0
 mov rdi, r9
 lea rsi, [rsp+24]
@@ -62,6 +72,8 @@ syscall
 jmp parse_get 
 
 parse_get:
+cmp byte ptr [rsi], 'G'   # check if GET request or POST request
+jne exit
 add rsi, 4
 jmp parse_request
 
@@ -103,7 +115,7 @@ close_file:
 mov rdi, r9
 mov rax, 3
 syscall
-jmp accept # look for next connection
+jmp exit # look for next connection
 
 static_response:
 mov rdi, r9 #fd returned by accept
