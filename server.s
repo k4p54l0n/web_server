@@ -54,7 +54,7 @@ syscall
 cmp rax, 0
 je read_request
 mov rdi, r9
-mov rax, 3 # close the previous connection (r9)
+mov rax, 3
 syscall
 jmp accept 
 
@@ -63,25 +63,25 @@ jmp accept
 read_request:
 mov rax, 3
 mov rdi, r8
-syscall # close socket fd (child r8 copy)
+syscall
 mov rax, 0
 mov rdi, r9
 lea rsi, [rsp+24]
 mov rdx, 1024
 syscall
-jmp parse_get 
+jmp parse_requests 
 
-parse_get:
+parse_requests:
 cmp byte ptr [rsi], 'G'   # check if GET request or POST request
 jne exit
 add rsi, 4
-jmp parse_request
+jmp parse_getrequest
 
-parse_request:
+parse_getrequest:
 cmp byte ptr [rsi+r10], 0x20
 je open_file
 inc r10
-jmp parse_request
+jmp parse_getrequest
 
 open_file:
 mov byte ptr[rsi+r10], 0
@@ -101,7 +101,7 @@ syscall
 mov r12, rax  #bytes read
 mov rax, 3
 syscall
-jmp static_response
+jmp static_getresponse
 
 write_file:
 lea rsi, [rsp+300]
@@ -117,9 +117,9 @@ mov rax, 3
 syscall
 jmp exit
 
-static_response:
+static_getresponse:
 mov rdi, r9 #fd returned by accept
-lea rsi, [rip+path]
+lea rsi, [rip+get_answer]
 mov rdx, 19
 mov rax, 1
 syscall
@@ -131,5 +131,5 @@ mov rdi, 0
 mov rax, 60
 syscall
 
-path:
+get_answer:
 .asciz "HTTP/1.0 200 OK\r\n\r\n"
