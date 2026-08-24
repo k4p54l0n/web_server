@@ -14,7 +14,7 @@ syscall
 mov r8, rax
 jmp initialize_addr
 
-# r8 is socket fd
+# R8 IS SOCKET FD
 
 initialize_addr:
 mov QWORD ptr[rsp], 0
@@ -58,7 +58,7 @@ mov rax, 3
 syscall
 jmp accept 
 
-#r9 is client fd
+# R9 = CLIENT FD
 
 read_request:
 mov rax, 3
@@ -72,10 +72,31 @@ syscall
 jmp parse_requests 
 
 parse_requests:
+cmp byte ptr [rsi], 'P'   # check if GET request or POST request
+je postrequest
 cmp byte ptr [rsi], 'G'   # check if GET request or POST request
 jne exit
 add rsi, 4
 jmp parse_getrequest
+
+postrequest:
+add rsi, 5
+jmp parse_postrequest
+
+parse_postrequest:
+cmp byte ptr [rsi+r10], 0x20
+je open_postfile
+inc r10
+jmp parse_postrequest
+
+open_postfile:   # OPEN THE FILE REQUESTED BY POST
+mov byte ptr[rsi+r10], 0
+mov rdi, rsi
+mov rax, 2
+mov rsi, 65  # WRITE ONLY | OCREATE
+mov rdx, 0777 # FILE PERMISSIONS IN CASE O_CREATE 
+syscall
+jmp exit
 
 parse_getrequest:
 cmp byte ptr [rsi+r10], 0x20
@@ -93,12 +114,12 @@ syscall
 jmp read_file
 
 read_file:
-mov rdi, rax # rax contains the fd of the requested file
-mov rax, 0 # read syscall
+mov rdi, rax # RAX HAS FILE REQUESTED BY GET
+mov rax, 0 # READ
 lea rsi, [rsp+300]
 mov rdx, 1024
 syscall
-mov r12, rax  #bytes read
+mov r12, rax  # BYTES READ IN RAX
 mov rax, 3
 syscall
 jmp static_getresponse
@@ -118,7 +139,7 @@ syscall
 jmp exit
 
 static_getresponse:
-mov rdi, r9 #fd returned by accept
+mov rdi, r9 # FD RETURNED BY ACCEPT (CLIENT)
 lea rsi, [rip+get_answer]
 mov rdx, 19
 mov rax, 1
