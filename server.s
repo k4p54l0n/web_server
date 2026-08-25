@@ -96,6 +96,62 @@ mov rax, 2
 mov rsi, 65  # WRITE ONLY | OCREATE
 mov rdx, 0777 # FILE PERMISSIONS IN CASE O_CREATE 
 syscall
+mov r10, rax  # FD OF OPENED POST FILE
+lea rsi, [rsp + 180]
+jmp find_contentlength
+
+find_contentlength:
+inc rsi
+cmp byte ptr [rsi], '9'
+ja find_contentlength 
+cmp byte ptr [rsi], '0'
+jb find_contentlength
+jmp get_contentlength
+
+get_contentlength:
+xor rax, rax
+xor rdx, rdx
+movzx rax, byte ptr [rsi]
+sub rax, 0x30
+mov rdx, rax
+inc rsi
+cmp byte ptr [rsi], '9'
+ja done
+cmp byte ptr [rsi], '0'
+jb done
+jmp atoi_loop
+
+atoi_loop:
+cmp byte ptr [rsi], '9'
+ja done
+cmp byte ptr [rsi], '0'
+jb done
+imul rdx, 10
+movzx rax, byte ptr [rsi]
+sub rax, 0x30
+add rdx, rax
+mov rax, rdx
+inc rsi
+jmp atoi_loop
+
+done:
+mov rdx, rax
+add rsi, 4  # go past the content length header 
+jmp write_postcontent
+
+# write into file then close then write 200 OK
+write_postcontent:
+mov rax, 1
+mov rdi, r10
+syscall
+mov rax, 3
+mov rdi, r10
+syscall
+mov rdi, r9 # FD RETURNED BY ACCEPT (CLIENT)
+lea rsi, [rip+get_answer]
+mov rdx, 19
+mov rax, 1
+syscall
 jmp exit
 
 parse_getrequest:
